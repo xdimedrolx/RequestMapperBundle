@@ -5,6 +5,7 @@ namespace Vangrg\RequestMapperBundle\Annotation\Driver;
 use Doctrine\Common\Annotations\Reader;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpKernel\Event\FilterControllerEvent;
+use Symfony\Component\HttpKernel\Event\ControllerEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
@@ -59,12 +60,16 @@ class RequestParamMapperDriver implements EventSubscriberInterface
     }
 
     /**
-     * @param FilterControllerEvent $event
+     * @param FilterControllerEvent|ControllerEvent $event
      *
      * @throws \ReflectionException
      */
-    public function prepareConfig(FilterControllerEvent $event)
+    public function prepareConfig($event)
     {
+        if (!$event instanceof FilterControllerEvent && !$event instanceof ControllerEvent) {
+            throw new \InvalidArgumentException(\sprintf('Expected instance of type %s, %s given', \class_exists(ControllerEvent::class) ? ControllerEvent::class : FilterControllerEvent::class, \is_object($event) ? \get_class($event) : \gettype($event)));
+        }
+
         if (!is_array($controller = $event->getController())) {
             return;
         }
@@ -100,12 +105,16 @@ class RequestParamMapperDriver implements EventSubscriberInterface
     }
 
     /**
-     * @param FilterControllerEvent $event
+     * @param FilterControllerEvent|ControllerEvent $event
      */
-    public function mapRequestData(FilterControllerEvent $event)
+    public function mapRequestData($event)
     {
         if (false == $this->configuration) {
             return;
+        }
+
+        if (!$event instanceof FilterControllerEvent && !$event instanceof ControllerEvent) {
+            throw new \InvalidArgumentException(\sprintf('Expected instance of type %s, %s given', \class_exists(ControllerEvent::class) ? ControllerEvent::class : FilterControllerEvent::class, \is_object($event) ? \get_class($event) : \gettype($event)));
         }
 
         $object = $this->requestMapper->map($event->getRequest(), $this->configuration);

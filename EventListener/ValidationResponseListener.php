@@ -6,6 +6,7 @@ use Vangrg\RequestMapperBundle\Exception\ValidationException;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\GetResponseForExceptionEvent;
+use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\Serializer\SerializerInterface;
 use Symfony\Component\Validator\ConstraintViolationListInterface;
 
@@ -29,11 +30,15 @@ class ValidationResponseListener
     }
 
     /**
-     * @param GetResponseForExceptionEvent $event
+     * @param GetResponseForExceptionEvent|ExceptionEvent $event
      */
-    public function onKernelException(GetResponseForExceptionEvent $event)
+    public function onKernelException($event)
     {
-        $exception = $event->getException();
+        if (!$event instanceof GetResponseForExceptionEvent && !$event instanceof ExceptionEvent) {
+            throw new \InvalidArgumentException(\sprintf('Expected instance of type %s, %s given', \class_exists(ExceptionEvent::class) ? ExceptionEvent::class : GetResponseForExceptionEvent::class, \is_object($event) ? \get_class($event) : \gettype($event)));
+        }
+
+        $exception = \method_exists($event, 'getThrowable') ? $event->getThrowable() : $event->getException();
 
         if ($exception instanceof ValidationException) {
             $result = $this->createErrorValidationResponse($exception->getErrors(), $exception->getMessage());
